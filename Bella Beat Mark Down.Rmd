@@ -1,0 +1,293 @@
+---
+title: "BellaBeat Case Study"
+author: "Naomi Rivera"
+date: "2023-05-25"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# **Bella Beat Case Study**
+
+### *Scenario*
+
+You are a junior data analyst working on the marketing analyst team at Bellabeat, a high-tech manufacturer of health-focused products for women. Bellabeat is a successful small company, but they have the potential to become a larger player in the global [smart device](https://en.wikipedia.org/wiki/Smart_device) market. Urška Sršen, cofounder and Chief Creative Oﬃcer of Bellabeat, believes that analyzing smart device ﬁtness data could help unlock new growth opportunities for the company. You have been asked to focus on one of Bellabeat's products and analyze smart device data to gain insight into how consumers are using their smart devices. The insights you discover will then help guide marketing strategy for the company. You will present your analysis to the Bellabeat executive team along with your high-level recommendations for Bellabeat's marketing strategy.
+
+### ***Business Task***
+
+The business task is to identify trends in non-Bella Beat smart devices, in order to understand how Bella Beat Customers are utilizing their smart device products. The analysis insights will be used to help the Bella Beatmarketing team stratigize marketing Bella Beat's smart devices.
+
+The stakeholders are:
+
+-   Urska Srsen:Bellabeat's cofounder and Chief Creative Oﬃcer
+
+-   Sando Mur: Bellabeat's cofounder
+
+-   Bella Beat Marketing Team
+
+### ***Prepare***
+
+I downloaded the data zip file from corresponding link, FitBit Fitness Tracker Data. I skimmed through the CSV files in Excel to get an overall understanding as to what type of data was collected. After skimming through tables within the data set, I observed table 'daily_Activity_merged' had much of the information combined from other tables within the data set. 'daily_Activity_merged' had information on activity such has total steps taken in a day, calories burned, and distance walked in a day. I noticed table 'sleepDay_merged' and 'weightLoginfo' held unique data that was not in 'daily_Activity_merged'
+
+I decided I wanted to use these three tables from the data set for my analysis.
+
+After reviewing the data set, there were limitations identified.
+
+-   The data set is outdated. It was collected from 2016.
+
+-   The sample size is small. The data claims to have sample size of 30 participants. In some data sets there are as high as 33 participant's data gathered. In some data sets, there not all paritcipants were represented.
+
+-   The gender of the participants are not listed. BellaBeat caters their products towards women. The data collected did not specify their data was collected from all woman.
+
+The FitBit Fitness Tracker Data is a public third party data set posted on Kaggle by a user named Mobius. The data was originally created by authors Furberg, R., Brinton, J., Keating, M., & Ortiz, A.
+
+### ***Process***
+
+I chose to utilize R to process data. First I loaded packages in R.
+
+```{r}
+install.packages("tidyverse")
+install.packages("ggplot2")
+install.packages("dplyr")
+install.packages("readr")
+install.packages("tidyr")
+install.packages("lubridate")
+install.packages("janitor")
+install.packages("skimr")
+install.packages("here")
+
+library("tidyverse")
+library("ggplot2")
+library("dplyr")
+library("readr")
+library("tidyr")
+library("lubridate")
+library("janitor")
+library("skimr")
+library("here")
+```
+
+Next I uploaded the data and created data frames for tables I planned to use.
+
+```{r}
+daily_activity<- read_csv("dailyActivity_merged.csv")
+weight<- read_csv("weightLogInfo_merged.csv")
+sleep<- read_csv("sleepDay_merged.csv")
+```
+
+I previewed each table to ensure they were uploaded correctly.
+
+```{r}
+head(daily_activity)
+str(daily_activity)
+colnames(daily_activity)
+```
+
+```{r}
+head(weight)
+str(weight) 
+colnames(weight)
+```
+
+```{r}
+head(sleep)
+str(sleep) 
+colnames(sleep)
+```
+
+I began to clean the data. I checked for any N/A values in the tables.
+
+```{r}
+any(is.na(daily_activity))
+any(is.na(sleep))
+any(is.na(weight))
+```
+
+'weight' table had an N/A value. I went in Excel to view table, and discovered the 'Fat' column did not have complete entries for all participants. The 'Fat' column can have null values added to data points that had no values.
+
+```{r}
+weight$Fat <- NULL
+head(weight)
+```
+
+Then I removed any duplicated values in the tables
+
+```{r}
+weight_v2<-distinct(weight)
+sleep_v2<-distinct(sleep)
+daily_activityv2<-distinct(daily_activity)
+head(weight)
+head(sleep)
+head(daily_activity)
+```
+
+Each table was then checked for how many participants (Id) data was obtained in each table.
+
+```{r}
+n_distinct(weight_v2$Id)
+```
+
+```{r}
+n_distinct(sleep_v2$Id)
+```
+
+```{r}
+n_distinct(daily_activityv2$Id)
+```
+
+According to data set overview on Kaggle, there were 30 participants in the sample. Not all participants' data were logged within the tables uploaded. In the 'daily_activityv2' table there was more then 30 Ids tracked. Moving forward table 'weight_v2' will not be used for this analysis as there were only 8 participants logged in 'weight_v2' which is not significant.
+
+Then remaining tables' date columns were formatted by adding a column for day of the week the date corresponds to.
+
+```{r}
+daily_activityv2 <- daily_activityv2 %>% mutate( Weekday = weekdays(as.Date(ActivityDate, "%m/%d/%Y")))
+view(daily_activity)
+```
+
+```{r}
+sleep_v2<- sleep_v2 %>% mutate( Weekday = weekdays(as.Date(SleepDay, "%m/%d/%Y")))
+view(sleep)
+```
+
+### *Analyze* 
+
+Now that the data is cleaned, I wanted to see the average amount of steps taken per day through out the duration of the data collection.
+
+```{r}
+average_total_steps <-daily_activityv2 %>%
+  summarize(average_total_steps=mean(TotalSteps))
+view(average_total_steps)
+```
+
+The average number of steps calculated was 7,638 steps (rounded to nearest whole number) According to HealthLine Journal 10,000 steps per day is considered to be an active person.
+
+Next I wanted to see how many participants in the study were considered active at least 1/3 of the days recorded.
+
+```{r}
+idcounts_active<-
+  table(daily_activityv2$Id[daily_activityv2$'TotalSteps' >=10000]) 
+ 
+view(idcounts_active)
+```
+
+7 people were considered active in steps for at least 1/3 (at least 20 days) of the study.
+
+I also calculated the average amount of hours of sleep in a day from the duration of the data collection.
+
+```{r}
+average_time_sleep <-sleep_v2 %>%
+  summarise(averagetimesleep= mean(TotalMinutesAsleep))/60
+view(average_time_sleep) 
+
+```
+
+The average amount of sleep is 6.99 hours of sleep. According to CDC, adults need 7-9 hours of sleep per night. The average amount sleep of the participants' in the the 'sleep' data is very close to the recommended 7 hours a night.
+
+To take a further look at the time spent sleeping, I wanted to look at the average sleep time per person.
+
+```{r}
+avg_sleep_time<- sleep_v2%>%
+  group_by(Id) %>%
+  summarise(avg_sleep_time=mean(TotalMinutesAsleep/60)) 
+
+View(avg_sleep_time)
+```
+
+```{r}
+avg_time_in_bed<-sleep_v2 %>%
+  group_by(Id) %>%
+  summarise(avg_time_in_bed=mean(TotalTimeInBed/60))
+View(avg_time_in_bed)
+```
+
+I then calculated the average  toal time spent in bed and average sleep time a per person. I joined the average sleep time and average time in bed per participant into one table.
+
+```{r}
+avg_sleep<-avg_sleep_time %>%
+  left_join(avg_time_in_bed, by="Id")
+view(avg_sleep)
+```
+
+### ***Share***
+
+```{r}
+##Created a table that shows the average sleep time per day of the week 
+Weekday_Avg_Sleep<- aggregate(sleep_v2$TotalMinutesAsleep/60, by= list(sleep_v2$Weekday), FUN=mean)
+
+colnames(Weekday_Avg_Sleep) <- c("Day_Of_Week","Average_Time_Sleep")
+view(Weekday_Avg_Sleep)
+```
+
+```{r}
+##Created a visualization of Weekday_Avg_Sleep
+ggplot(data=Weekday_Avg_Sleep, aes(x=Day_Of_Week, y=Average_Time_Sleep))+
+geom_bar(stat="identity", fill="blue")+
+  geom_text(aes(label= round(Average_Time_Sleep, 2)), vjust=+2,color="white")+
+labs(title="Average Sleep Time By Day Of the Week", x= "Day of the Week", y= "Average Sleep Time (hours)")
+```
+
+Sunday appears to be where on average participants had the most amount of rest. Other days did not vary much in sleep, about an 15-20 min difference between days other then Sunday.
+
+I created a visualization to see the correlation between average sleep time and average time spent in bed.
+
+```{r}
+ggplot(data= avg_sleep, aes(x=avg_time_in_bed, y=avg_sleep_time))+
+geom_point()+
+geom_hline(yintercept=7, color="red")+
+  geom_text(aes(x=13 ,y=7, label="Average Reccomended Hours of Sleep", vjust=+1))+
+labs(title="Time Spent in Bed Versus Time Spent Sleeping", y= "Average Sleep Time (Hours)", x=" Average Time Spent in Bed (hours)", subtitle="Correlation between average time sleeping versus average time spent in bed")
+
+##Each Plot presents the average per ID number
+```
+
+The correlation observed is the more time spent in bed on average, the more time is spent on average sleeping. On average there are a number are participants who are getting under the recommended 7 hours of sleep per day. There are some who are getting less then 4 hours of sleep on average per day. It possible these participant's sleep were not logged accurately, or they have sleeping conditions such as insomnia .
+
+I created a visualization to show the correlation between total active time and sedentary time.
+
+```{r}
+##Added total number of active minutes per day as new column`
+daily_activity_v2<- daily_activity %>%   group_by(Id) %>%   mutate(TotalActiveMinutes=VeryActiveMinutes+FairlyActiveMinutes+LightlyActiveMinutes)
+```
+
+```{r}
+ggplot(data= daily_activity_v2, aes(x=TotalActiveMinutes , y=SedentaryMinutes)) +
+geom_point()+
+geom_smooth()+
+  labs(title="Active Minutes and Sedentary Minutes", y= "Sedentary Time (Minutes)", x= "Total Active Time (Minutes)",subtitle = "Active Minutes includes time spent lightly, fairly, and very active")
+```
+
+There was a negative correlation found. The more time participants spent being active, there was less time spent being sedentary.
+
+Lastly, I created a visualization between total steps taken in a day and calories burned in a day.
+
+```{r}
+ggplot(data=daily_activity, aes(x=TotalSteps, y=Calories))+
+ geom_point()+
+  geom_smooth()+
+  labs(title="Total Steps and Calories", subtitle="Correlation between total steps taken and calories burned in a day", x="Total Steps", y="Calories Burned")
+
+```
+
+The correlation seen in this chart shows the more steps that are taken by participants, the more calories they burned.
+
+### *Act*
+
+#### *Insights*
+
+The following insights were made based on this analysis:
+
+-   The most of the participants were not active for at least a 1/3 of the study. There are other ways to measure physical activity other then steps such as weight lifting and cycling.
+
+-   Sleep is important. There are a number of people who on average did not get the average recommended amount of sleep of 7 hours a day. On average people tend to get the most amount of sleep on Sundays.
+
+-   Those who spend more time in bed are likely to get more hours of sleep.
+
+-   The more steps a person takes though out the day they will likely burn more calories compared to someone who takes less steps
+
+#### ***Recommendations:***
+
+People who strive to be active should be able to track their activity goals for the day. The Bella Beat Fitness App should allow users to set daily goals of desired amount of activity. There could be a feature added that notifies users of specific time frames of inactivity. A user sets a specific time and duration to be altered when inactivity is tracked. For example: A user works at a computer desk all day. The user wants to ensure they get up at least every hour and take a walk around the office. An alert is set to go off when the app tracks inactivity for an hour to remind the user to stand and move. This helps hold users accountable to attain their goals.
+
+Sleep is important for a healthy lifestyle. Getting at least the recommended 7 hours of sleep a day should be what users aim for. The app should have a feature that promotes rest and sleep. This can include allowing users to set bedtime reminders, or interactive meditation features to help users relax and wind down before falling asleep.
+
+Bella Beat app should have a feature that promotes healthy eating. Many times people correlate dieting with harsh food restrictions and bland foods, when in actuality eating a well balanced diet is a lifestyle. There could be a feature added that allows users to share their favorite recipes with other Bella Beat app users.
